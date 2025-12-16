@@ -4,12 +4,24 @@ const TELEDUCE_URL = process.env.TELEDUCE_URL;
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET;
 const SITE_TOKEN = process.env.SITE_TOKEN;
 
+// List of allowed origins
+const allowedOrigins = [
+  "https://www.corefactors.ai",
+  "https://corefactors-website.webflow.io"
+];
+
 exports.handler = async (event) => {
+  const origin = event.headers.origin;
+
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "https://www.yoursite.com",
     "Access-Control-Allow-Headers": "Content-Type, X-SITE-TOKEN",
-    "Access-Control-Allow-Methods": "POST, OPTIONS"
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
+
+  // Dynamically set Access-Control-Allow-Origin if origin is allowed
+  if (allowedOrigins.includes(origin)) {
+    corsHeaders["Access-Control-Allow-Origin"] = origin;
+  }
 
   // Handle preflight
   if (event.httpMethod === "OPTIONS") {
@@ -17,7 +29,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    // ✅ Site token check
+    // Site token check
     if (event.headers["x-site-token"] !== SITE_TOKEN) {
       return {
         statusCode: 403,
@@ -28,17 +40,17 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body);
 
-    // Honeypot
+    // Honeypot check
     if (body.middle_name) {
       return { statusCode: 400, headers: corsHeaders, body: "Spam" };
     }
 
-    // Time check
+    // Time check to prevent bots
     if (Date.now() - body.formLoadedAt < 3000) {
       return { statusCode: 400, headers: corsHeaders, body: "Too fast" };
     }
 
-    // CAPTCHA
+    // CAPTCHA check
     if (!body.captchaToken) {
       return { statusCode: 400, headers: corsHeaders, body: "Missing captcha" };
     }
@@ -53,7 +65,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders, body: "Captcha failed" };
     }
 
-    // Teleduce payload
+    // Prepare payload for Teleduce
     const payload = {
       fullName: body.fullName,
       mobileNo: body.mobileNo,
