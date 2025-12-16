@@ -1,6 +1,7 @@
 const axios = require("axios");
 
-const TELEDUCE_URL = process.env.TELEDUCE_URL;
+const TELEDUCE_SECRET = process.env.TELEDUCE_SECRET;
+const TELEDUCE_URL = `https://teleduce.corefactors.in/lead/apiwebhook/${TELEDUCE_SECRET}/websiteCorefactors/`;
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET;
 const SITE_TOKEN = process.env.SITE_TOKEN;
 
@@ -18,7 +19,6 @@ exports.handler = async (event) => {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 
-  // Dynamically set Access-Control-Allow-Origin if origin is allowed
   if (allowedOrigins.includes(origin)) {
     corsHeaders["Access-Control-Allow-Origin"] = origin;
   }
@@ -31,23 +31,14 @@ exports.handler = async (event) => {
   try {
     // Site token check
     if (event.headers["x-site-token"] !== SITE_TOKEN) {
-      return {
-        statusCode: 403,
-        headers: corsHeaders,
-        body: "Forbidden"
-      };
+      return { statusCode: 403, headers: corsHeaders, body: "Forbidden" };
     }
 
     const body = JSON.parse(event.body);
 
     // Honeypot check
-    if (body.middle_name) {
+    if (body.middle_name && body.middle_name.trim() !== "") {
       return { statusCode: 400, headers: corsHeaders, body: "Spam" };
-    }
-
-    // Time check to prevent bots
-    if (Date.now() - body.formLoadedAt < 3000) {
-      return { statusCode: 400, headers: corsHeaders, body: "Too fast" };
     }
 
     // CAPTCHA check
@@ -61,7 +52,7 @@ exports.handler = async (event) => {
       { params: { secret: RECAPTCHA_SECRET, response: body.captchaToken } }
     );
 
-    if (!captcha.data.success || captcha.data.score < 0.5) {
+    if (!captcha.data.success || (captcha.data.score && captcha.data.score < 0.5)) {
       return { statusCode: 400, headers: corsHeaders, body: "Captcha failed" };
     }
 
@@ -73,13 +64,13 @@ exports.handler = async (event) => {
       companyName: body.companyName,
       noEmployees: body.noEmployees,
       jobTitle: body.jobTitle,
-      primarySource: body.primarySource,
-      secondarySource: body.secondarySource,
+      primarySource: body.primarySource || "Website",
+      secondarySource: body.secondarySource || "Website",
       webPage: body.webPage,
-      campaignName: body.campaignName,
-      additi1: body.additi1,
-      additi2: body.additi2,
-      utm_id: body.utm_id
+      campaignName: body.campaignName || "",
+      additi1: body.additi1 || "",
+      additi2: body.additi2 || "",
+      utm_id: body.utm_id || ""
     };
 
     await axios.post(TELEDUCE_URL, payload);
