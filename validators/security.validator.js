@@ -29,11 +29,11 @@ function validateSiteToken(headers) {
  */
 function validateHoneypot(body) {
   if (checkHoneypot(body)) {
-    console.log("❌ [SECURITY] Honeypot check failed - spam detected");
+    console.log("[SECURITY] Honeypot check failed - spam detected");
     return { statusCode: 400, body: { error: "Spam detected" } };
   }
 
-  console.log("✅ [SECURITY] Honeypot check passed");
+  console.log("[SECURITY] Honeypot check passed");
   return null;
 }
 
