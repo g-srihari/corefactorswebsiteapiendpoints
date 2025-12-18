@@ -1,0 +1,396 @@
+# Corefactors Website API Endpoints
+
+Backend API for handling form submissions, newsletter subscriptions, and integrations with Teleduce CRM, Calendly, and email services.
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [API Endpoints](#api-endpoints)
+- [Security Features](#security-features)
+- [Environment Variables](#environment-variables)
+- [Development](#development)
+- [Integrations](#integrations)
+
+---
+
+## 🎯 Overview
+
+This serverless application handles all backend operations for the Corefactors website, including:
+- **Form submissions** from 13 different forms
+- **Newsletter subscriptions** via Sender.net
+- **CRM integration** with Teleduce
+- **Meeting scheduling** via Calendly
+- **Email notifications** for meeting confirmations
+- **Security validations** (CAPTCHA, honeypot, rate limiting)
+
+**Technology Stack:**
+- Runtime: Node.js 18.x
+- Platform: AWS Lambda + API Gateway
+- Local Development: Express.js server
+- Testing: Custom test suites
+
+---
+
+## 🏗️ Architecture
+
+### Request Flow
+
+```
+Webflow Form → API Gateway → Lambda Handler → Validators → Form Handler → Integrations
+                                                    ↓
+                                            Security Checks
+                                            - Site Token
+                                            - Honeypot
+                                            - reCAPTCHA v3
+                                            - Email Domain
+                                            - Timing Validation
+                                                    ↓
+                                            Process Submission
+                                            - Map payload
+                                            - Send to Teleduce
+                                            - Fetch Calendly data (if applicable)
+                                            - Send email notifications
+```
+
+### Components
+
+1. **Lambda Handler** (`server.js`) - AWS Lambda entry point
+2. **Local Server** (`local.js`) - Express server for development
+3. **Handlers** - Process forms and newsletters
+4. **Validators** - Security and data validation
+5. **Services** - External API integrations
+6. **Forms** - Form configurations and payload mapping
+7. **Actions** - Post-submission actions (emails, etc.)
+
+---
+
+## ✨ Features
+
+### Security
+- ✅ Site token verification
+- ✅ Google reCAPTCHA v3 integration
+- ✅ 6 honeypot fields for bot detection
+- ✅ Email domain blocking (personal & disposable)
+- ✅ Timing attack prevention (3s min, 1hr max)
+- ✅ CORS protection
+
+### Form Types (13 total)
+1. **demo** - Demo request form
+2. **ebook** - eBook download form
+3. **partner** - Partner inquiry form
+4. **sell** - Sales inquiry form
+5. **homepage** - Homepage contact form
+6. **contactus** - General contact form
+7. **support** - Support request form
+8. **basicpopup** - Basic popup form
+9. **webinar** - Webinar registration
+10. **popupform** - General popup form
+11. **scheduleademo** - Schedule demo (Calendly)
+12. **banktechxevent** - BankTechX event (Calendly)
+13. **bookademonow** - Book demo now (Calendly)
+
+### Integrations
+- **Teleduce CRM** - Lead management
+- **Calendly API** - Meeting scheduling data
+- **Sender.net** - Newsletter subscriptions
+- **Email Service** - Meeting confirmation emails
+
+---
+
+## 📁 Project Structure
+
+```
+corefactorswebsiteapiendpoints/
+│
+├── server.js                    # AWS Lambda handler (production)
+├── local.js                     # Express server (development)
+├── package.json                 # Dependencies
+├── .env                         # Environment variables (not in git)
+├── template.yaml                # AWS SAM template
+│
+├── handlers/                    # Request handlers
+│   ├── form.handler.js          # Form submission logic
+│   └── newsletter.handler.js    # Newsletter subscription logic
+│
+├── validators/                  # Security & validation
+│   ├── security.validator.js    # Token, honeypot, CAPTCHA
+│   ├── email.validator.js       # Email domain blocking
+│   └── timing.validator.js      # Timing attack prevention
+│
+├── services/                    # External API integrations
+│   ├── teleduce.service.js      # Teleduce CRM API
+│   ├── calendly.service.js      # Calendly API
+│   ├── email.service.js         # Email sending
+│   └── sender.service.js        # Sender.net API
+│
+├── forms/                       # Form configurations
+│   ├── index.js                 # Form registry
+│   ├── democorefactors.js       # Demo form config
+│   ├── scheduleademo.js         # Schedule demo config
+│   └── ... (11 more form configs)
+│
+├── actions/                     # Post-submission actions
+│   └── email.action.js          # Meeting email notifications
+│
+├── utils/                       # Utility functions
+│   ├── cors.js                  # CORS headers
+│   ├── captcha.js               # reCAPTCHA verification
+│   └── honeypot.js              # Honeypot utilities
+│
+├── newsletters/                 # Newsletter configurations
+│   ├── index.js                 # Newsletter registry
+│   └── blog.js                  # Blog newsletter config
+│
+└── tests/                       # Test files
+    ├── test-all.js              # Comprehensive test suite
+    ├── test-forms.js            # Form-specific tests
+    ├── test-validations.js      # Validation tests
+    ├── test-email.js            # Email functionality tests
+    └── test-lambda.js           # Lambda handler tests
+```
+
+---
+
+## 🔌 API Endpoints
+
+### 1. Form Submission
+
+**Endpoint:** `POST /lead`
+
+**Headers:**
+```json
+{
+  "Content-Type": "application/json",
+  "x-site-token": "webflow-prod"
+}
+```
+
+**Request Body:**
+```json
+{
+  "formType": "demo",
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john@company.com",
+  "phone": "+1234567890",
+  "company": "ACME Corp",
+  "designation": "Manager",
+  "noEmployees": "50-100",
+  "g-recaptcha-response": "03AGdBq...",
+  "formLoadedAt": 1702900000000
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Form submitted successfully"
+}
+```
+
+**Error Responses:**
+- `400` - Invalid data, captcha failed, email domain blocked
+- `403` - Invalid site token, honeypot triggered
+- `429` - Timing validation failed
+- `500` - Server error
+
+---
+
+### 2. Newsletter Subscription
+
+**Endpoint:** `POST /subscribe`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "newsletterType": "blog"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully subscribed"
+}
+```
+
+---
+
+## 🔒 Security Features
+
+### 1. Site Token Validation
+- All requests require `x-site-token` header
+- Token must match `SITE_TOKEN` environment variable
+- Returns `403 Forbidden` if invalid
+
+### 2. Google reCAPTCHA v3
+- Token required in `g-recaptcha-response` field
+- Minimum score: 0.5
+- Test keys provided for development
+- Can be skipped in development via `skipCaptcha` option
+
+### 3. Honeypot Fields
+Hidden fields that legitimate users won't fill:
+- `phone_verify`
+- `user_confirmation`
+- `additional_notes`
+- `referral_code`
+- `subscribe_updates`
+- `contact_preference`
+
+### 4. Email Domain Blocking
+
+**Personal Domains (13):**
+- gmail.com, yahoo.com, outlook.com, hotmail.com
+- icloud.com, aol.com, protonmail.com, zoho.com
+- yandex.com, mail.com, gmx.com, tutanota.com
+- fastmail.com
+
+**Disposable Domains (12):**
+- mailinator.com, guerrillamail.com, 10minutemail.com
+- temp-mail.org, throwaway.email, maildrop.cc
+- getnada.com, tempmail.com, sharklasers.com
+- trashmail.com, yopmail.com, fakeinbox.com
+
+### 5. Timing Validation
+- **Minimum:** 3 seconds (prevents bot submissions)
+- **Maximum:** 1 hour (prevents stale sessions)
+- Uses `formLoadedAt` timestamp
+
+---
+
+## 🔧 Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+# Site Security
+SITE_TOKEN=webflow-prod
+
+# Google reCAPTCHA v3
+RECAPTCHA_SECRET=6LcL7QksAAAAAK17EuFDzLkGuvX8PRg1IWsLwULu
+
+# Teleduce CRM
+TELEDUCE_SECRET=2c04e244-b0d7-43e5-b9b9-cadbe9f05828
+TELEDUCE_CONTACTUS_SECRET=b946312a-89c1-4fe9-a7b3-0db1b7ade389
+TELEDUCE_EMAIL_SECRET=2c04e244-b0d7-43e5-b9b9-cadbe9f05828/1016
+
+# Calendly API
+CALENDLY_TOKEN=eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ...
+
+# Sender.net API
+SENDER_API_KEY=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+
+# Server Port (for local.js)
+PORT=3000
+```
+
+---
+
+## 💻 Development
+
+### Prerequisites
+- Node.js 18.x or higher
+- npm or yarn
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+### Running Locally
+
+Express Server (Recommended for development)**
+```bash
+node local.js
+# Server runs on http://localhost:3000
+```
+
+## 🔗 Integrations
+
+### 1. Teleduce CRM
+
+**Purpose:** Lead management and tracking
+
+**API Endpoint:** `https://tw1.teleduce.corefactors.in/api-receive-json/`
+
+**Authentication:** API secret in URL
+
+**Forms Using Teleduce:** All 13 forms
+
+**Payload Structure:**
+```javascript
+{
+  name: "John Doe",
+  email: "john@company.com",
+  mobile: "+1234567890",
+  // ... form-specific fields
+}
+```
+
+---
+
+### 2. Calendly API
+
+**Purpose:** Fetch meeting details for scheduled demos
+
+**API Endpoint:** `https://api.calendly.com/scheduled_events/{uuid}`
+
+**Authentication:** Bearer token in headers
+
+**Forms Using Calendly:**
+- scheduleademo
+- banktechxevent
+- bookademonow
+
+**Data Retrieved:**
+- Meeting title
+- Start/end times
+- Host information
+- Event location
+
+---
+
+### 3. Email Service (Teleduce Email API)
+
+**Purpose:** Send meeting confirmation emails
+
+**API Endpoint:** `https://tw1.teleduce.corefactors.in/send-email-json-otom/`
+
+**Recipients:**
+- Form submitter (client)
+- sheetal.s@corefactors.in (sales team)
+- akshay.w@corefactors.in (sales team)
+
+**Email Template Features:**
+- Professional HTML design
+- Meeting details (date, time, link)
+- Client information
+- Corefactors branding
+
+---
+
+### 4. Sender.net
+
+**Purpose:** Newsletter subscription management
+
+**API Endpoint:** `https://api.sender.net/v2/subscribers`
+
+**Authentication:** Bearer token
+
+**Newsletter Types:**
+- `blog` - Blog updates
+
+---
