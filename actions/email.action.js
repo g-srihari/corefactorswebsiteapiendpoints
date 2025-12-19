@@ -4,7 +4,7 @@ const emailService = require('../services/email.service');
  * Send meeting confirmation emails to client and sales team
  * Used by: scheduleademo, banktechxevent, bookademonow
  */
-async function sendMeetingEmail(body, teleduceResponse, defaultTopic = 'Meeting Request') {
+async function sendMeetingEmail(body, defaultTopic = 'Meeting Request') {
   try {
     // Send email to both sales team and client
     await emailService.sendMeetingNotification({

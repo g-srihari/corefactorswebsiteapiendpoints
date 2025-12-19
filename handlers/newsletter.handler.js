@@ -13,7 +13,7 @@ async function handleSubscription(body) {
   console.log("[NEWSLETTER] Subscription request for:", newsletterType);
 
   if (!newsletterConfig) {
-    console.log("❌ Invalid newsletter type:", newsletterType);
+    console.log("Invalid newsletter type:", newsletterType);
     return {
       statusCode: 400,
       body: { error: "Invalid newsletter type" }
@@ -38,7 +38,7 @@ async function handleSubscription(body) {
       tags: payload.tags
     });
     
-    console.log("[NEWSLETTER] ✓ Successfully subscribed:", payload.email);
+    console.log("[NEWSLETTER]  Successfully subscribed:", payload.email);
     
     return {
       statusCode: result.status,

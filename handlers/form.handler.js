@@ -19,13 +19,11 @@ async function enrichWithCalendlyData(formType, body) {
   }
 
   try {
-    console.log('📅 [CALENDLY] Fetching event data...');
     const calendlyData = await calendlyService.getCalendlyEventData();
     const leadData = calendlyService.extractLeadData(
       calendlyData,
       body.selectedSolutions || []
     );
-    console.log('✅ [CALENDLY] Data enriched');
     return { ...body, ...leadData };
   } catch (calendlyError) {
     console.error('[CALENDLY] Error:', calendlyError.message);

@@ -48,11 +48,11 @@ async function validateCaptcha(token, skipCaptcha = false) {
     return null;
   }
 
-  if (!captchaToken) {
+  if (!token) {
     return { statusCode: 400, body: { error: "Missing captcha" } };
   }
 
-  const isValid = await verifyCaptcha(captchaToken);
+  const isValid = await verifyCaptcha(token);
   if (!isValid) {
     return { statusCode: 400, body: { error: "Invalid captcha" } };
   }
