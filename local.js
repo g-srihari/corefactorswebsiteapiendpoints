@@ -5,6 +5,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const formHandler = require('./handlers/form.handler');
 const newsletterHandler = require('./handlers/newsletter.handler');
+const getCorsHeaders = require("./utils/cors"); // Add CORS utility
 const teleduceService = require('./services/teleduce.service');
 
 // ==============================
@@ -43,10 +44,18 @@ const app = express();
 app.use(bodyParser.json());
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Content-Type, X-SITE-TOKEN");
-  res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  const origin = req.headers.origin;
+  const headers = getCorsHeaders(origin);
+  
+  // Apply CORS headers (same as Lambda)
+  Object.keys(headers).forEach(key => {
+    res.header(key, headers[key]);
+  });
+  
+  if (req.method === "OPTIONS") {
+    console.log('[LOCAL] Handling preflight request from:', origin);
+    return res.sendStatus(200);
+  }
   next();
 });
 

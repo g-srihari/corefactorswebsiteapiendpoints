@@ -1,4 +1,3 @@
-const getCorsHeaders = require("./utils/cors");
 const formHandler = require("./handlers/form.handler");
 const newsletterHandler = require("./handlers/newsletter.handler");
 
@@ -7,14 +6,24 @@ const newsletterHandler = require("./handlers/newsletter.handler");
  * Routes requests to appropriate handlers based on path
  */
 exports.handler = async (event) => {
-  const origin = event.headers?.origin || event.headers?.Origin;
-  const headers = getCorsHeaders(origin);
   const path = event.path || event.rawPath || '';
+  
+  // Simple CORS headers - allow all domains
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, X-SITE-TOKEN",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+  };
+  
+  // Debug logging
+  console.log('[LAMBDA] Request path:', path);
+  console.log('[LAMBDA] Method:', event.httpMethod);
 
   /* -------------------------
      Preflight (CORS)
   -------------------------- */
   if (event.httpMethod === "OPTIONS") {
+    console.log('[LAMBDA] Handling preflight request');
     return {
       statusCode: 200,
       headers,
